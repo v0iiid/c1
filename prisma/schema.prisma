@@ -1,0 +1,97 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// TODO: Define your models here (User, Launch, WhitelistEntry, Purchase, etc.)
+
+model User {
+  id        String     @id @default(uuid())
+  email     String     @unique
+  password  String
+  name      String
+  launches  Launch[]
+  purchases Purchase[]
+  createdAt DateTime   @default(now())
+}
+
+model Launch {
+  id            String           @id @default(uuid())
+  name          String
+  symbol        String
+  totalSupply   Float
+  pricePerToken Float
+  startsAt      DateTime
+  endsAt        DateTime
+  maxPerWallet  Float
+  description   String?
+  creatorId     String
+  creator       User             @relation(fields: [creatorId], references: [id])
+  tiers         Tier[]
+  vesting       Vesting?
+  whitelist     WhitelistEntry[]
+  purchases     Purchase[]
+  referrals     ReferralCode[]
+  createdAt     DateTime         @default(now())
+}
+
+model Tier {
+  id            String @id @default(uuid())
+  minAmount     Float
+  maxAmount     Float
+  pricePerToken Float
+  launchId      String
+  launch        Launch @relation(fields: [launchId], references: [id])
+}
+
+model Vesting {
+  id          String @id @default(uuid())
+  cliffDays   Int
+  vestingDays Int
+  tgePercent  Float
+  launchId    String @unique
+  launch      Launch @relation(fields: [launchId], references: [id])
+}
+
+model WhitelistEntry {
+  id        String   @id @default(uuid())
+  address   String
+  launchId  String
+  launch    Launch   @relation(fields: [launchId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([launchId, address])
+}
+
+model ReferralCode {
+  id              String     @id @default(uuid())
+  code            String
+  discountPercent Float
+  maxUses         Int
+  usedCount       Int        @default(0)
+  launchId        String
+  launch          Launch     @relation(fields: [launchId], references: [id])
+  purchases       Purchase[]
+  createdAt       DateTime   @default(now())
+
+  @@unique([launchId, code])
+}
+
+model Purchase {
+  id             String        @id @default(uuid())
+  userId         String
+  user           User          @relation(fields: [userId], references: [id])
+  launchId       String
+  launch         Launch        @relation(fields: [launchId], references: [id])
+  walletAddress  String
+  amount         Float
+  totalCost      Float
+  txSignature    String        @unique
+  referralCodeId String?
+  referralCode   ReferralCode? @relation(fields: [referralCodeId], references: [id])
+  createdAt      DateTime      @default(now())
+}
